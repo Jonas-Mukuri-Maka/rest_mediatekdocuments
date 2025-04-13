@@ -40,6 +40,13 @@ class MyAccessBDD extends AccessBDD {
                 return $this->selectAllRevues();
             case "exemplaire" :
                 return $this->selectExemplairesRevue($champs);
+            
+            case "commandedocument" :
+                return $this->selectAllCommandesDocument($champs);
+            case "suivi" :
+                return $this->selectTableSimple($table);
+            case "commande" :
+                return $this->selectAllCommandes();
             case "genre" :
             case "public" :
             case "rayon" :
@@ -63,8 +70,10 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementInsert(string $table, ?array $champs) : ?int{
         switch($table){
-            case "" :
-                // return $this->uneFonction(parametres);
+            case "commandedocument" :
+                return $this->insertCommandeDocument($champs);
+            case "commande" :
+                return $this->insertCommande($champs);
             default:                    
                 // cas général
                 return $this->insertOneTupleOneTable($table, $champs);	
@@ -81,8 +90,9 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementUpdate(string $table, ?string $id, ?array $champs) : ?int{
         switch($table){
-            case "" :
-                // return $this->uneFonction(parametres);
+            
+            case "commandedocument" :
+                return $this->updateCommandeDocument($champs);
             default:                    
                 // cas général
                 return $this->updateOneTupleOneTable($table, $id, $champs);
@@ -98,8 +108,8 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementDelete(string $table, ?array $champs) : ?int{
         switch($table){
-            case "" :
-                // return $this->uneFonction(parametres);
+            case "commandedocument" :
+                return $this->deleteCommandeDocument($champs);
             default:                    
                 // cas général
                 return $this->deleteTuplesOneTable($table, $champs);	
@@ -275,6 +285,190 @@ class MyAccessBDD extends AccessBDD {
         $requete .= "where e.id = :id ";
         $requete .= "order by e.dateAchat DESC";
         return $this->conn->queryBDD($requete, $champNecessaire);
-    }		    
+    }
+    
+    private function selectAllCommandes(): ?array {
+        $requete = "Select * from commande;";
+        return $this->conn->queryBDD($requete);
+    }
+    
+    /**
+     * Récupère toutes les informations concernant les commandes d'un document
+     * @param array\null $champs
+     * @return array|null
+     */
+    private function selectAllCommandesDocument(?array $champs): ?array
+    {
+        if (empty($champs)) {
+            $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs) || !isset($champs['idLivreDvd'])) {
+            return null;
+        }
+
+        $requete = "
+            SELECT 
+                cd.id, 
+                cd.nbExemplaire, 
+                cd.idLivreDvd, 
+                cd.idSuivi, 
+                c.dateCommande, 
+                c.montant, 
+                s.Libelle 
+            FROM 
+                commandedocument cd 
+            JOIN 
+                commande c ON cd.id = c.id 
+            JOIN 
+                suivi s ON s.id = cd.idSuivi 
+            WHERE 
+                cd.idLivreDvd = :idLivreDvd
+            ORDER BY 
+                c.dateCommande DESC
+        ";
+
+        return $this->conn->queryBDD($requete, ['idLivreDvd' => $champs['idLivreDvd']]);
+    }
+    
+    
+    
+    private function insertCommande( ?array $champs) : ?int
+    {
+        if (empty($champs)) {
+        $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs)) {
+            return false;
+        }
+
+        $id = $champs['id'];
+        $dateCommande = $champs['dateCommande'];
+        $montant = floatval($champs['montant']);
+
+        $sqlCommande = "INSERT INTO commande (id, dateCommande, montant) 
+                        VALUES (:id, :dateCommande, :montant)";
+
+        $this->conn->queryBDD($sqlCommande, [
+            'id' => $id,
+            'dateCommande' => $dateCommande,
+            'montant' => $montant
+        ]);
+
+        return true;
+    }
+    
+    
+    
+    private function insertCommandeDocument( ?array $champs) : ?int
+    {
+        if (empty($champs)) {
+        $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs)) {
+            return false;
+        }
+
+        
+        $id = $champs['id'];
+        $dateCommande = $champs['dateCommande'];
+        $montant = floatval($champs['montant']);
+        $nbExemplaire = intval($champs['nbExemplaire']);
+        $idLivreDvd = $champs['idLivreDvd'];
+        $idSuivi = $champs['idSuivi'];
+        $Libelle = $champs['Libelle'];
+
+        
+        $sqlCommande = "INSERT INTO commande (id, dateCommande, montant) 
+                        VALUES (:id, :dateCommande, :montant)";
+
+        $sqlCommandeDocument = "INSERT INTO commandedocument 
+                                (id, nbExemplaire, idLivreDvd, idSuivi, Libelle)
+                                VALUES (:id, :nbExemplaire, :idLivreDvd, :idSuivi, :Libelle)";
+
+        
+        $this->conn->queryBDD($sqlCommande, [
+            'id' => $id,
+            'dateCommande' => $dateCommande,
+            'montant' => $montant
+        ]);
+
+        $this->conn->queryBDD($sqlCommandeDocument, [
+            'id' => $id,
+            'nbExemplaire' => $nbExemplaire,
+            'idLivreDvd' => $idLivreDvd,
+            'idSuivi' => $idSuivi,
+            'Libelle' => $Libelle
+        ]);
+
+        return true;
+    }
+    
+    
+    
+    private function updateCommandeDocument(?array $champs): ?int
+    {
+        if (empty($champs)) {
+            $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs) || !isset($champs['id'], $champs['idSuivi'])) {
+            return false;
+        }
+        
+        $id = $champs['id'];
+        $idSuivi = $champs['idSuivi'];
+
+        $lib = "SELECT Libelle FROM suivi WHERE id = :idSuivi";
+        $libValide = $this->conn->queryBDD($lib, ['idSuivi' => $idSuivi]);
+
+        if (!$libValide || count($libValide) === 0) {
+            return false;
+        }
+
+        $libelle = $libValide[0]['Libelle'];
+
+        
+        $sqlCommandeDocument = "UPDATE commandedocument 
+                        SET idSuivi = :idSuivi, Libelle = :Libelle 
+                        WHERE id = :id";
+
+        $champsValide = [
+            'id' => $id,
+            'idSuivi' => $idSuivi,
+            'Libelle' => $libelle
+        ];
+
+        $this->conn->queryBDD($sqlCommandeDocument, $champsValide);
+        return true;
+    }
+    
+    
+    
+    private function deleteCommandeDocument(?array $champs): ?int
+    {
+        
+        if (empty($champs)) {
+            $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs) || !isset($champs['id'])) {
+            return false;
+        }
+
+        $id = $champs['id'];
+
+        // First delete from commandedocument
+        $sqlCommandeDocument = "DELETE FROM commandedocument WHERE id = :id";
+        $this->conn->queryBDD($sqlCommandeDocument, ['id' => $id]);
+
+        // Then delete from commande
+        $sqlCommande = "DELETE FROM commande WHERE id = :id";
+        $this->conn->queryBDD($sqlCommande, ['id' => $id]);
+
+        return true;
+    }
     
 }
