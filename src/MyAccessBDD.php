@@ -40,7 +40,6 @@ class MyAccessBDD extends AccessBDD {
                 return $this->selectAllRevues();
             case "exemplaire" :
                 return $this->selectExemplairesRevue($champs);
-            
             case "commandedocument" :
                 return $this->selectAllCommandesDocument($champs);
             case "suivi" :
@@ -53,6 +52,10 @@ class MyAccessBDD extends AccessBDD {
             case "etat" :
                 // select portant sur une table contenant juste id et libelle
                 return $this->selectTableSimple($table);
+            case "abonnement":
+                return $this->selectAllAbonnementsRevue($champs);
+            case "abonnementecheance":
+                return $this->selectAllAbonnementsEcheance();
             case "" :
                 // return $this->uneFonction(parametres);
             default:
@@ -74,6 +77,8 @@ class MyAccessBDD extends AccessBDD {
                 return $this->insertCommandeDocument($champs);
             case "commande" :
                 return $this->insertCommande($champs);
+            case "abonnement" :
+                return $this->insertAbonnement($champs);
             default:                    
                 // cas général
                 return $this->insertOneTupleOneTable($table, $champs);	
@@ -110,6 +115,8 @@ class MyAccessBDD extends AccessBDD {
         switch($table){
             case "commandedocument" :
                 return $this->deleteCommandeDocument($champs);
+            case "abonnement" :
+                return $this->deleteAbonnement($champs);
             default:                    
                 // cas général
                 return $this->deleteTuplesOneTable($table, $champs);	
@@ -460,13 +467,115 @@ class MyAccessBDD extends AccessBDD {
 
         $id = $champs['id'];
 
-        // First delete from commandedocument
         $sqlCommandeDocument = "DELETE FROM commandedocument WHERE id = :id";
         $this->conn->queryBDD($sqlCommandeDocument, ['id' => $id]);
 
-        // Then delete from commande
         $sqlCommande = "DELETE FROM commande WHERE id = :id";
         $this->conn->queryBDD($sqlCommande, ['id' => $id]);
+
+        return true;
+    }
+    
+    private function selectAllAbonnementsRevue(?array $champs): ?array 
+    {
+        if (empty($champs)) {
+            $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs) || !isset($champs['id'])) {
+            return null;
+        }
+
+        $requete = "SELECT 
+                        c.id, 
+                        c.dateCommande, 
+                        c.montant, 
+                        a.dateFinAbonnement, 
+                        a.idRevue
+                    FROM 
+                        commande c 
+                    JOIN 
+                        abonnement a ON c.id = a.id
+                    WHERE 
+                        a.idRevue = :id 
+                    ORDER BY 
+                        c.dateCommande DESC
+                ";
+        return $this->conn->queryBDD($requete, ['id' => $champs['id']]);
+    }
+    
+     /**
+     * Récupère abonnements arrivant à échéance
+     * @return array|null
+     */
+    private function selectAllAbonnementsEcheance(): ?array {
+        $requete = "select c.id, c.dateCommande, c.montant, a.idRevue, a.dateFinAbonnement ";
+        $requete .= "from commande c ";
+        $requete .= "join abonnement a ON c.id = a.id ";
+        $requete .= "where datediff(current_date(), a.dateFinAbonnement) < 30 ";
+        $requete .= "order by a.dateFinAbonnement ASC";
+        return $this->conn->queryBDD($requete);
+    }
+    
+    private function insertAbonnement( ?array $champs) : ?int
+    {
+        if (empty($champs)) {
+        $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs)) {
+            return false;
+        }
+
+        
+        $id = $champs['id'];
+        $dateCommande = $champs['dateCommande'];
+        $montant = floatval($champs['montant']);
+        $dateFinAbonnement = $champs['dateFinAbonnement'];
+        $idRevue = $champs['idRevue'];
+
+        
+        $sqlCommande = "INSERT INTO commande (id, dateCommande, montant) 
+                        VALUES (:id, :dateCommande, :montant)";
+
+        $sqlAbonnement = "INSERT INTO abonnement 
+                                (id, dateFinAbonnement, idRevue)
+                                VALUES (:id, :dateFinAbonnement, :idRevue)";
+
+        
+        $this->conn->queryBDD($sqlCommande, [
+            'id' => $id,
+            'dateCommande' => $dateCommande,
+            'montant' => $montant
+        ]);
+
+        $this->conn->queryBDD($sqlAbonnement, [
+            'id' => $id,
+            'dateFinAbonnement' => $dateFinAbonnement,
+            'idRevue' => $idRevue
+        ]);
+
+        return true;
+    }
+    
+    private function deleteAbonnement( ?array $champs): ?int
+    {
+        
+        if (empty($champs)) {
+            $champs = json_decode(file_get_contents("php://input"), true);
+        }
+
+        if (empty($champs) || !isset($champs['id'])) {
+            return false;
+        }
+
+        $id = $champs['id'];
+
+        $sqlCommande= "DELETE FROM commande WHERE id = :id";
+        $this->conn->queryBDD($sqlCommande, ['id' => $id]);
+
+        $sqlCommandeAbonnement = "DELETE FROM abonnement WHERE id = :id";
+        $this->conn->queryBDD($sqlCommandeAbonnement, ['id' => $id]);
 
         return true;
     }
