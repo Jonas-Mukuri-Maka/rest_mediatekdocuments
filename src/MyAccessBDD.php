@@ -46,6 +46,10 @@ class MyAccessBDD extends AccessBDD {
                 return $this->selectTableSimple($table);
             case "commande" :
                 return $this->selectAllCommandes();
+            case "utilisateur" :
+                return $this->selectUtilisateur($champs);
+            case "service" :
+                return $this->selectAllServices();
             case "genre" :
             case "public" :
             case "rayon" :
@@ -580,4 +584,30 @@ class MyAccessBDD extends AccessBDD {
         return true;
     }
     
+    private function selectUtilisateur(?array $champs): ?array 
+    {
+        if (empty($champs)) {
+            $champs = json_decode(file_get_contents("php://input"), true);
+        }
+        if (empty($champs) || !isset($champs['login'])) {
+            return null;
+        }
+        $requete = "SELECT 
+                        u.login, 
+                        u.password , 
+                        u.nom, 
+                        u.prenom, 
+                        u.idService
+                    FROM 
+                        utilisateur u 
+                    WHERE 
+                        u.login = :login AND u.password = :password
+                    ";
+        return $this->conn->queryBDD($requete, ['login' => $champs['login'], 'password' => $champs['password']]);
+    }
+
+    private function selectAllServices(): ?array {
+        $requete = "Select * from service;";
+        return $this->conn->queryBDD($requete);
+    }
 }
