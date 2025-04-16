@@ -298,6 +298,11 @@ class MyAccessBDD extends AccessBDD {
         return $this->conn->queryBDD($requete, $champNecessaire);
     }
     
+   
+    /**
+     * récupère tous les commandes
+     * @return array|null
+     */
     private function selectAllCommandes(): ?array {
         $requete = "Select * from commande;";
         return $this->conn->queryBDD($requete);
@@ -343,7 +348,11 @@ class MyAccessBDD extends AccessBDD {
     }
     
     
-    
+    /**
+     * demande d'ajout (insert) d'une commande
+     * @param array|null $champs
+     * @return int|null
+     */	
     private function insertCommande( ?array $champs) : ?int
     {
         if (empty($champs)) {
@@ -371,7 +380,11 @@ class MyAccessBDD extends AccessBDD {
     }
     
     
-    
+    /**
+     * demande d'ajout (insert) d'un document de commande
+     * @param array|null $champs
+     * @return int|null
+     */	
     private function insertCommandeDocument( ?array $champs) : ?int
     {
         if (empty($champs)) {
@@ -418,7 +431,11 @@ class MyAccessBDD extends AccessBDD {
     }
     
     
-    
+    /**
+     * demande de modification (update) d'un document de commande
+     * @param array|null $champs
+     * @return int|null
+     */	
     private function updateCommandeDocument(?array $champs): ?int
     {
         if (empty($champs)) {
@@ -457,7 +474,11 @@ class MyAccessBDD extends AccessBDD {
     }
     
     
-    
+    /**
+     * demande suppresion (delete) d'un document de commande
+     * @param array|null $champs
+     * @return int|null
+     */	
     private function deleteCommandeDocument(?array $champs): ?int
     {
         
@@ -480,6 +501,11 @@ class MyAccessBDD extends AccessBDD {
         return true;
     }
     
+    /**
+     * Récupère toutes les abonnements d'une revue
+     * @param array|null $champs
+     * @return array|null
+     */
     private function selectAllAbonnementsRevue(?array $champs): ?array 
     {
         if (empty($champs)) {
@@ -521,6 +547,11 @@ class MyAccessBDD extends AccessBDD {
         return $this->conn->queryBDD($requete);
     }
     
+    /**
+     * demande d'ajout (insert) d'un abonnement
+     * @param array|null $champs
+     * @return int|null
+     */	
     private function insertAbonnement( ?array $champs) : ?int
     {
         if (empty($champs)) {
@@ -562,6 +593,11 @@ class MyAccessBDD extends AccessBDD {
         return true;
     }
     
+    /**
+     * demande de suppression (delete) d'un abonnement
+     * @param array|null $champs
+     * @return int|null
+     */	
     private function deleteAbonnement( ?array $champs): ?int
     {
         
@@ -584,6 +620,11 @@ class MyAccessBDD extends AccessBDD {
         return true;
     }
     
+    /**
+     * Récupère les informations de l'utilisateur concernés
+     * @param array|null $champs
+     * @return array|null
+     */
     private function selectUtilisateur(?array $champs): ?array 
     {
         if (empty($champs)) {
@@ -606,6 +647,10 @@ class MyAccessBDD extends AccessBDD {
         return $this->conn->queryBDD($requete, ['login' => $champs['login'], 'password' => $champs['password']]);
     }
 
+    /**
+     * Récupère toutes les services
+     * @return array|null
+     */
     private function selectAllServices(): ?array {
         $requete = "Select * from service;";
         return $this->conn->queryBDD($requete);
